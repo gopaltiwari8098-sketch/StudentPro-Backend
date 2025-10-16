@@ -8,7 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
 const API_URL =
   window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
     ? "http://localhost:5000/api/students"
-    : "https://your-deployed-server.com/api/students";
+    : "https://studentpro-backend-2.onrender.com/api/students"; // ✅ quotes added
+
 const API_ORIGIN = API_URL.replace(/\/api\/.*$/, "");
 
 let state = {
@@ -187,7 +188,6 @@ async function handleSave(e) {
     }
     await loadStudents();
 
-    // ✅ close modal properly
     const modalEl = $("studentModal");
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
