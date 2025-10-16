@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CRUD-App</title>
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- AOS (Animate On Scroll) -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.css" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+
+  <!-- Chart.js for graphs -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-gradient shadow-sm">
+    <div class="container">
+      <a class="navbar-brand d-flex align-items-center" href="#">
+        <div class="logo-circle me-2">SP</div>
+        <div>
+          <div class="brand-title">StudentPro</div>
+          <small class="text-muted">Premium Student Manager</small>
+        </div>
+      </a>
+
+      <div class="ms-auto d-flex align-items-center gap-2">
+        <div class="me-2 d-none d-md-block">
+          <input id="searchInput" class="form-control form-control-sm" placeholder="Search by name, email, course">
+        </div>
+
+        <div class="form-check form-switch text-white me-2">
+          <input class="form-check-input" type="checkbox" id="darkToggle">
+          <label class="form-check-label small" for="darkToggle">Dark</label>
+        </div>
+
+        <button class="btn btn-success btn-sm" id="openAddBtn" data-bs-toggle="modal" data-bs-target="#studentModal">
+          <i class="fa-solid fa-plus me-1"></i> Add Student
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero py-5">
+    <div class="container">
+      <div class="row align-items-center">
+        <div class="col-lg-7" data-aos="fade-right">
+          <h1 class="display-6 fw-bold premium-heading">
+            <strong>StudentPro</strong> — Smarter, Faster, Better
+          </h1>
+          <p class="lead text-muted">
+            Add, edit, and manage student details with style and efficiency.  
+            Clean UI, smooth animations, and production-ready structure for seamless backend integration.
+          </p>
+          <div class="mt-3">
+            <button class="btn btn-primary me-2" id="scrollToTable">Get Started</button>
+            <a class="btn btn-outline-light" href="#footer">Contact</a>
+          </div>
+        </div>
+        <div class="col-lg-5 text-center" data-aos="fade-left">
+          <img src="hero.jpg" alt="hero" class="img-fluid rounded shadow-lg hero-img">
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="container my-5" id="mainSection" data-aos="fade-up">
+    <div class="card shadow-sm">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <div>
+            <h5 class="card-title mb-0">Students</h5>
+            <small class="text-muted">Total: <span id="totalCount">0</span></small>
+          </div>
+
+          <div class="d-flex gap-2 align-items-center">
+            <button class="btn btn-outline-success btn-sm" onclick="exportCSV()">
+              <i class="fa-solid fa-file-csv me-1"></i> Export CSV
+            </button>
+            <div class="btn-group">
+              <button class="btn btn-outline-secondary btn-sm" id="sortNameBtn" data-sort="name">Sort: Name</button>
+              <button class="btn btn-outline-secondary btn-sm" id="sortAgeBtn" data-sort="age">Sort: Age</button>
+            </div>
+            <select id="pageSize" class="form-select form-select-sm" style="width:110px;">
+              <option value="5">5 / page</option>
+              <option value="10" selected>10 / page</option>
+              <option value="20">20 / page</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle" id="studentsTable">
+            <thead class="table-light">
+             <tr>
+                <th>Avatar</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Course</th>
+                <th>Age</th>
+                <th>Roll No</th>
+                <th>Phone</th>
+                <th>Department</th>
+                <th>GPA</th>
+                <th>Skills</th>
+                <th>Achievements</th>
+                <th>Portfolio</th>
+                <th class="text-end">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="studentsBody">
+              <!-- rows injected -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+          <div>
+            <small class="text-muted">Showing <span id="showingRange">0</span></small>
+          </div>
+          <nav>
+            <ul class="pagination pagination-sm mb-0" id="pagination"></ul>
+          </nav>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart Section -->
+    <div class="card my-4">
+      <div class="card-body">
+        <h5>Students by Department</h5>
+        <canvas id="deptChart" height="200"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal -->
+  <div class="modal fade" id="studentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <form id="studentForm" class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="modalTitle">Add Student</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <input type="hidden" id="studentId">
+          <div class="mb-3">
+            <label class="form-label">Profile Picture</label>
+            <input id="avatar" type="file" class="form-control" accept="image/*">
+            <img id="avatarPreview" class="rounded mt-2 d-none" style="width:80px;height:80px;object-fit:cover;" />
+            <div class="form-text">Optional. JPG, PNG under 2 MB.</div>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Name <span class="text-danger">*</span></label>
+            <input id="name" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Roll Number / Student ID</label>
+            <input id="rollNumber" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email <span class="text-danger">*</span></label>
+            <input id="email" type="email" class="form-control" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone Number</label>
+            <input id="phone" type="tel" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Course</label>
+            <input id="course" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Department</label>
+            <select id="department" class="form-select">
+              <option value="">Select Department</option>
+              <option>Computer Science</option>
+              <option>Electronics</option>
+              <option>Mechanical</option>
+              <option>Civil</option>
+              <option>Electrical</option>
+              <option>Computer Science with Artificial Intelligence</option>
+              <option>Computer Science with AI and Ml</option>
+              <option>Computer Science with Data structure</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Year / Semester</label>
+            <input id="yearSemester" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">GPA / Percentage</label>
+            <input id="gpa" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Age</label>
+            <input id="age" type="number" class="form-control" min="1" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Address</label>
+            <textarea id="address" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Skills</label>
+            <input id="skills" class="form-control" placeholder="Java, HTML, CSS" />
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Achievements</label>
+            <textarea id="achievements" class="form-control" rows="2"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">LinkedIn / Portfolio URL</label>
+            <input id="portfolio" type="url" class="form-control" />
+          </div>
+          <div class="form-text">Fields marked with <span class="text-danger">*</span> are required.</div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Cancel</button>
+          <button class="btn btn-primary" type="submit" id="saveBtn">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toasts -->
+  <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100;">
+    <div id="toastContainer"></div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer id="footer" class="footer mt-5">
+    <div class="container py-5">
+      <div class="row">
+        <div class="col-md-4 mb-3" data-aos="fade-up">
+          <h5>StudentPro</h5>
+          <p class="text-muted">A beautifully designed student management UI made for your portfolio. Clean code and easy to connect with a backend.</p>
+        </div>
+        <div class="col-md-3 mb-3" data-aos="fade-up" data-aos-delay="100">
+          <h6>Quick Links</h6>
+          <ul class="list-unstyled">
+            <li><a href="#" class="text-muted">Home</a></li>
+            <li><a href="#" class="text-muted">Features</a></li>
+            <li><a href="#" class="text-muted">Docs</a></li>
+          </ul>
+        </div>
+        <div class="col-md-3 mb-3" data-aos="fade-up" data-aos-delay="200">
+          <h6>Contact</h6>
+          <p class="text-muted mb-1">gopaltiwari8098@gmail.com</p>
+          <p class="text-muted">+91 8193924964</p>
+        </div>
+        <div class="col-md-2 d-flex align-items-start" data-aos="fade-up" data-aos-delay="300">
+          <div>
+            <h6>Follow</h6>
+            <div class="d-flex gap-2">
+              <a class="social-link" href="#"><i class="fa-brands fa-github fa-lg"></i></a>
+              <a class="social-link" href="#"><i class="fa-brands fa-linkedin fa-lg"></i></a>
+              <a class="social-link" href="#"><i class="fa-brands fa-twitter fa-lg"></i></a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <hr />
+      <div class="text-center small text-muted">© <span id="year"></span> StudentPro — Built for your portfolio</div>
+    </div>
+  </footer>
+
+  <!-- Bootstrap JS + Popper -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- AOS -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/aos/2.3.4/aos.js"></script>
+
+  <!-- App JS -->
+  <script src="script.js"></script>
+</body>
+</html>
