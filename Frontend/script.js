@@ -123,23 +123,17 @@ function openAddModal() {
 }
 
 function resetForm() {
-  $("studentId").value = "";
-  $("name").value = "";
-  $("email").value = "";
-  $("course").value = "";
-  $("age").value = "";
-  $("rollNumber").value = "";
-  $("phone").value = "";
-  $("department").value = "";
-  $("gpa").value = "";
-  $("skills").value = "";
-  $("achievements").value = "";
-  $("portfolio").value = "";
+  const fields = [
+    "studentId", "name", "email", "course", "age", "rollNumber",
+    "phone", "department", "gpa", "skills", "achievements", "portfolio"
+  ];
+  fields.forEach((f) => ($(f).value = ""));
   $("avatar").value = "";
   $("avatarPreview").classList.add("d-none");
   state.editId = null;
 }
 
+// ---------- 💾 SAVE STUDENT ----------
 async function handleSave(e) {
   e.preventDefault();
 
@@ -177,17 +171,26 @@ async function handleSave(e) {
   try {
     if (id) {
       await updateStudentFD(id, fd);
-      showToast("Student updated", "success");
+      showToast("✅ Student updated successfully!", "success");
     } else {
       await createStudentFD(fd);
-      showToast("Student added", "success");
+      showToast("✅ Student added successfully!", "success");
     }
 
-    // AUTO REFRESH
+    // ✅ Instantly refresh after save
     await loadStudents();
-    const modalEl = $("studentModal");
-    const modalInstance = bootstrap.Modal.getInstance(modalEl);
-    if (modalInstance) modalInstance.hide();
+    render();
+
+    // ✅ Smooth scroll to table
+    $("mainSection").scrollIntoView({ behavior: "smooth" });
+
+    // ✅ Close modal after 200ms
+    setTimeout(() => {
+      const modalEl = $("studentModal");
+      const modalInstance = bootstrap.Modal.getInstance(modalEl);
+      if (modalInstance) modalInstance.hide();
+      resetForm();
+    }, 200);
 
   } catch (err) {
     showToast(err.message || "Save failed", "danger");
@@ -308,18 +311,10 @@ function onEdit(id) {
   const student = state.students.find((s) => s._id === id);
   if (!student) return;
 
-  $("studentId").value = student._id;
-  $("name").value = student.name || "";
-  $("email").value = student.email || "";
-  $("course").value = student.course || "";
-  $("age").value = student.age || "";
-  $("rollNumber").value = student.rollNumber || "";
-  $("phone").value = student.phone || "";
-  $("department").value = student.department || "";
-  $("gpa").value = student.gpa || "";
-  $("skills").value = student.skills || "";
-  $("achievements").value = student.achievements || "";
-  $("portfolio").value = student.portfolio || "";
+  const fields = ["_id","name","email","course","age","rollNumber","phone","department","gpa","skills","achievements","portfolio"];
+  fields.forEach((f) => {
+    if ($(f)) $(f).value = student[f] || "";
+  });
   $("avatar").value = "";
   $("avatarPreview").classList.add("d-none");
 
@@ -332,78 +327,12 @@ async function onDelete(id) {
   if (!confirm("Are you sure you want to delete this student?")) return;
   try {
     await deleteStudent(id);
-    showToast("Student deleted", "warning");
-    await loadStudents(); // AUTO REFRESH
+    showToast("🗑️ Student deleted successfully", "warning");
+    await loadStudents();
+    render();
   } catch (err) {
     showToast(err.message || "Delete failed", "danger");
   }
-}
-
-// --- sorting ---
-function setSort(field) {
-  if (state.sortBy === field) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-  else {
-    state.sortBy = field;
-    state.sortDir = "asc";
-  }
-  render();
-}
-
-// --- CSV Export ---
-function exportCSV() {
-  if (!state.students.length) {
-    showToast("No data to export", "warning");
-    return;
-  }
-
-  const headers = [
-    "Name","Email","Course","Age","Roll No","Phone","Department","GPA","Skills","Achievements","Portfolio"
-  ];
-  const rows = state.students.map((s) => [
-    `"${s.name || ""}"`,
-    `"${s.email || ""}"`,
-    `"${s.course || ""}"`,
-    `"${s.age || ""}"`,
-    `"${s.rollNumber || ""}"`,
-    `"${s.phone || ""}"`,
-    `"${s.department || ""}"`,
-    `"${s.gpa || ""}"`,
-    `"${s.skills || ""}"`,
-    `"${s.achievements || ""}"`,
-    `"${s.portfolio || ""}"`,
-  ]);
-
-  const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "students.csv";
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-}
-
-// --- Chart ---
-function updateChart() {
-  const deptCounts = {};
-  state.students.forEach((s) => {
-    const dept = s.department || "Unknown";
-    deptCounts[dept] = (deptCounts[dept] || 0) + 1;
-  });
-
-  const labels = Object.keys(deptCounts);
-  const data = Object.values(deptCounts);
-
-  const ctx = $("deptChart");
-  if (deptChart) deptChart.destroy();
-
-  deptChart = new Chart(ctx, {
-    type: "pie",
-    data: { labels, datasets: [{ data, backgroundColor: ["#4caf50","#2196f3","#ff9800","#9c27b0","#f44336","#00bcd4","#8bc34a","#ff5722"] }] },
-    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
-  });
 }
 
 // --- utils ---
@@ -429,5 +358,15 @@ function showToast(message, type = "info") {
 }
 
 function escapeHtml(str = "") {
-  return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
+  return String(str)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
+
+// ✅ Auto scroll fix after modal close
+document.getElementById("studentModal").addEventListener("hidden.bs.modal", () => {
+  document.getElementById("mainSection").scrollIntoView({ behavior: "smooth" });
+});
