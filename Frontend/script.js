@@ -5,11 +5,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // --- API base ---
-const API_URL =
-  window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-    ? "http://localhost:5000/api/students"
-    : "https://studentpro-backend-2.onrender.com/api/students"; // ✅ quotes added
-
+const API_URL = "https://studentpro-backend-2.onrender.com/api/students";
 const API_ORIGIN = API_URL.replace(/\/api\/.*$/, "");
 
 let state = {
@@ -90,7 +86,7 @@ function setTheme(name) {
 // ---------- API ----------
 async function loadStudents() {
   try {
-    const res = await fetch(API_URL);
+    const res = await fetch(API_URL, { cache: "no-store" });
     if (!res.ok) throw new Error("Failed to fetch students");
     state.students = await res.json();
     render();
@@ -186,11 +182,13 @@ async function handleSave(e) {
       await createStudentFD(fd);
       showToast("Student added", "success");
     }
-    await loadStudents();
 
+    // AUTO REFRESH
+    await loadStudents();
     const modalEl = $("studentModal");
     const modalInstance = bootstrap.Modal.getInstance(modalEl);
     if (modalInstance) modalInstance.hide();
+
   } catch (err) {
     showToast(err.message || "Save failed", "danger");
   }
@@ -288,7 +286,7 @@ function render() {
   AOS.refreshHard();
 }
 
-// ---------- Pagination ----------
+// --- Pagination ---
 function renderPagination(totalPages) {
   const ul = $("pagination");
   ul.innerHTML = "";
@@ -335,7 +333,7 @@ async function onDelete(id) {
   try {
     await deleteStudent(id);
     showToast("Student deleted", "warning");
-    await loadStudents();
+    await loadStudents(); // AUTO REFRESH
   } catch (err) {
     showToast(err.message || "Delete failed", "danger");
   }
@@ -359,17 +357,7 @@ function exportCSV() {
   }
 
   const headers = [
-    "Name",
-    "Email",
-    "Course",
-    "Age",
-    "Roll No",
-    "Phone",
-    "Department",
-    "GPA",
-    "Skills",
-    "Achievements",
-    "Portfolio",
+    "Name","Email","Course","Age","Roll No","Phone","Department","GPA","Skills","Achievements","Portfolio"
   ];
   const rows = state.students.map((s) => [
     `"${s.name || ""}"`,
@@ -413,30 +401,8 @@ function updateChart() {
 
   deptChart = new Chart(ctx, {
     type: "pie",
-    data: {
-      labels,
-      datasets: [
-        {
-          data,
-          backgroundColor: [
-            "#4caf50",
-            "#2196f3",
-            "#ff9800",
-            "#9c27b0",
-            "#f44336",
-            "#00bcd4",
-            "#8bc34a",
-            "#ff5722",
-          ],
-        },
-      ],
-    },
-    options: {
-      responsive: true,
-      plugins: {
-        legend: { position: "bottom" },
-      },
-    },
+    data: { labels, datasets: [{ data, backgroundColor: ["#4caf50","#2196f3","#ff9800","#9c27b0","#f44336","#00bcd4","#8bc34a","#ff5722"] }] },
+    options: { responsive: true, plugins: { legend: { position: "bottom" } } },
   });
 }
 
@@ -463,10 +429,5 @@ function showToast(message, type = "info") {
 }
 
 function escapeHtml(str = "") {
-  return String(str)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+  return String(str).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
 }

@@ -20,12 +20,16 @@ const app = express();
 app.use(helmet());
 app.use(morgan("dev"));
 
-// ✅ CORS setup
+// ✅ CORS setup (Flexible for Netlify + localhost)
 app.use(cors({
-  origin: [
-    "https://studentpro-app.netlify.app",  // your frontend domain
-    "http://localhost:5500"                // for local testing
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like Postman) or from our frontend
+    if (!origin || origin.includes("netlify.app") || origin.includes("localhost")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE"],
   credentials: true
 }));
