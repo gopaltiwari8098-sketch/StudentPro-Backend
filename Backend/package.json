@@ -1,7 +1,6 @@
 {
   "name": "studentpro-backend",
   "version": "1.0.0",
-  "description": "Backend for StudentPro App - Node.js, Express, MongoDB",
   "main": "server.js",
   "type": "module",
   "scripts": {
@@ -21,8 +20,5 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC"
+  }
 }

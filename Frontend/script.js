@@ -5,9 +5,10 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // --- API base ---
-const API_URL = "https://studentpro-backend-2.onrender.com/api/students";
+const API_URL = "https://studentpro-backend.onrender.com/api/students";
 const API_ORIGIN = API_URL.replace(/\/api\/.*$/, "");
 
+// --- State ---
 let state = {
   students: [],
   page: 1,
@@ -20,11 +21,11 @@ let state = {
 
 let deptChart = null;
 
-// --- helpers ---
+// --- Helpers ---
 const $ = (id) => document.getElementById(id);
 const formatDate = (d) => (d ? new Date(d).toLocaleDateString() : "—");
 
-// --- init ---
+// --- Initialize ---
 async function initApp() {
   $("year").textContent = new Date().getFullYear();
   $("pageSize").value = state.pageSize;
@@ -61,6 +62,7 @@ function attachEvents() {
   });
 }
 
+// --- Avatar Preview ---
 function attachPreviewEvent() {
   const avatarInput = $("avatar");
   const avatarPreview = $("avatarPreview");
@@ -77,13 +79,14 @@ function attachPreviewEvent() {
   }
 }
 
+// --- Theme ---
 function setTheme(name) {
   if (name === "dark") document.documentElement.setAttribute("data-theme", "dark");
   else document.documentElement.removeAttribute("data-theme");
   localStorage.setItem("sp_theme", name);
 }
 
-// ---------- API ----------
+// --- API Calls ---
 async function loadStudents() {
   try {
     const res = await fetch(API_URL, { cache: "no-store" });
@@ -97,24 +100,44 @@ async function loadStudents() {
 }
 
 async function createStudentFD(formData) {
-  const res = await fetch(API_URL, { method: "POST", body: formData });
-  if (!res.ok) throw new Error("Failed to create student");
-  return res.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Render cold start
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: formData,
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error("Failed to create student");
+    return res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function updateStudentFD(id, formData) {
-  const res = await fetch(`${API_URL}/${id}`, { method: "PUT", body: formData });
-  if (!res.ok) throw new Error("Failed to update student");
-  return res.json();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout for Render cold start
+  try {
+    const res = await fetch(`${API_URL}/${id}`, {
+      method: "PUT",
+      body: formData,
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error("Failed to update student");
+    return res.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function deleteStudent(id) {
   const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-  if (!res.ok) throw new Error("Failed to delete");
+  if (!res.ok) throw new Error("Failed to delete student");
   return res.json();
 }
 
-// ---------- CRUD UI ----------
+// --- CRUD UI ---
 function openAddModal() {
   resetForm();
   $("modalTitle").textContent = "Add Student";
@@ -133,7 +156,7 @@ function resetForm() {
   state.editId = null;
 }
 
-// ---------- 💾 SAVE STUDENT ----------
+// --- Save Student ---
 async function handleSave(e) {
   e.preventDefault();
 
@@ -177,14 +200,13 @@ async function handleSave(e) {
       showToast("✅ Student added successfully!", "success");
     }
 
-    // ✅ Instantly refresh after save
+    // Auto refresh table + chart
     await loadStudents();
-    render();
 
-    // ✅ Smooth scroll to table
+    // Smooth scroll to table
     $("mainSection").scrollIntoView({ behavior: "smooth" });
 
-    // ✅ Close modal after 200ms
+    // Close modal after 200ms
     setTimeout(() => {
       const modalEl = $("studentModal");
       const modalInstance = bootstrap.Modal.getInstance(modalEl);
@@ -197,7 +219,7 @@ async function handleSave(e) {
   }
 }
 
-// ---------- table rendering ----------
+// --- Table Rendering ---
 function render() {
   let list = [...state.students];
 
@@ -306,15 +328,19 @@ function gotoPage(n) {
   render();
 }
 
-// --- edit & delete ---
+// --- Edit & Delete ---
 function onEdit(id) {
   const student = state.students.find((s) => s._id === id);
   if (!student) return;
 
-  const fields = ["_id","name","email","course","age","rollNumber","phone","department","gpa","skills","achievements","portfolio"];
+  const fields = [
+    "studentId", "name", "email", "course", "age", "rollNumber",
+    "phone", "department", "gpa", "skills", "achievements", "portfolio"
+  ];
   fields.forEach((f) => {
     if ($(f)) $(f).value = student[f] || "";
   });
+
   $("avatar").value = "";
   $("avatarPreview").classList.add("d-none");
 
@@ -329,13 +355,49 @@ async function onDelete(id) {
     await deleteStudent(id);
     showToast("🗑️ Student deleted successfully", "warning");
     await loadStudents();
-    render();
   } catch (err) {
     showToast(err.message || "Delete failed", "danger");
   }
 }
 
-// --- utils ---
+// --- Chart ---
+function updateChart() {
+  const deptCounts = {};
+  state.students.forEach((s) => {
+    const dept = s.department || "Unknown";
+    deptCounts[dept] = (deptCounts[dept] || 0) + 1;
+  });
+
+  const labels = Object.keys(deptCounts);
+  const data = Object.values(deptCounts);
+
+  const ctx = $("deptChart");
+  if (deptChart) deptChart.destroy();
+
+  deptChart = new Chart(ctx, {
+    type: "pie",
+    data: {
+      labels,
+      datasets: [
+        {
+          data,
+          backgroundColor: [
+            "#4caf50", "#2196f3", "#ff9800", "#9c27b0",
+            "#f44336", "#00bcd4", "#8bc34a", "#ff5722"
+          ],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: "bottom" },
+      },
+    },
+  });
+}
+
+// --- Utils ---
 function showToast(message, type = "info") {
   const toastId = "t" + Date.now();
   const container = $("toastContainer");
@@ -366,7 +428,14 @@ function escapeHtml(str = "") {
     .replaceAll("'", "&#039;");
 }
 
-// ✅ Auto scroll fix after modal close
-document.getElementById("studentModal").addEventListener("hidden.bs.modal", () => {
-  document.getElementById("mainSection").scrollIntoView({ behavior: "smooth" });
+// --- Auto scroll after modal close ---
+$("studentModal").addEventListener("hidden.bs.modal", () => {
+  $("mainSection").scrollIntoView({ behavior: "smooth" });
 });
+
+// --- Sort ---
+function setSort(field) {
+  if (state.sortBy === field) state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
+  else state.sortBy = field;
+  render();
+}
